@@ -31,7 +31,7 @@
   <TemplateURL>https://raw.githubusercontent.com/nonewind/nanobot/main/unraid/nanobot.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/HKUDS/nanobot/main/nanobot_logo.png</Icon>
   <ExtraParams>--restart=unless-stopped</ExtraParams>
-  <PostArgs/>
+  <PostArgs>gateway</PostArgs>
   <CPUset/>
   <DateInstalled/>
   <DonateText>Support nanobot development</DonateText>
