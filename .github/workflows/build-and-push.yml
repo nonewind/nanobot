@@ -1,0 +1,120 @@
+name: Build and Push Docker Image
+
+on:
+  # 每日 UTC 时间 2:00 (北京时间 10:00) 自动运行
+  schedule:
+    - cron: '0 2 * * *'
+  # 支持手动触发
+  workflow_dispatch:
+  # 代码推送时也触发
+  push:
+    branches:
+      - main
+
+env:
+  # 只使用 GitHub Container Registry (免费)
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/nanobot
+
+jobs:
+  sync-upstream:
+    runs-on: ubuntu-latest
+    outputs:
+      updated: ${{ steps.sync.outputs.updated }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/HKUDS/nanobot.git || true
+          git fetch upstream
+
+      - name: Sync with upstream
+        id: sync
+        run: |
+          # 获取当前 commit
+          BEFORE=$(git rev-parse HEAD)
+          
+          # 合并上游更新
+          git merge upstream/main --no-edit --allow-unrelated-histories || true
+          
+          # 获取合并后 commit
+          AFTER=$(git rev-parse HEAD)
+          
+          if [ "$BEFORE" != "$AFTER" ]; then
+            echo "updated=true" >> $GITHUB_OUTPUT
+            echo "::notice::Upstream changes detected, will rebuild"
+          else
+            echo "updated=false" >> $GITHUB_OUTPUT
+            echo "::notice::No upstream changes"
+          fi
+
+      - name: Push changes
+        if: steps.sync.outputs.updated == 'true'
+        run: git push origin main
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: sync-upstream
+    # 总是构建（首次运行或有更新时）
+    if: always()
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version info
+        id: version
+        run: |
+          echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.date }}
+            ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.date }}-${{ steps.version.outputs.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Create release notes
+        run: |
+          echo "## 🐈 nanobot Docker Image Build" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Date:** $(date +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ steps.version.outputs.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Images Published (GitHub Container Registry)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.IMAGE_NAME }}:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.IMAGE_NAME }}:${{ steps.version.outputs.date }}\`" >> $GITHUB_STEP_SUMMARY

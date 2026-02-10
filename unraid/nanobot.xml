@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>nanobot</Name>
+  <Repository>ghcr.io/nonewind/nanobot:latest</Repository>
+  <Registry>https://github.com/nonewind/nanobot/pkgs/container/nanobot</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/HKUDS/nanobot</Support>
+  <Project>https://github.com/HKUDS/nanobot</Project>
+  <Overview>
+    🐈 nanobot - Ultra-Lightweight Personal AI Assistant
+    
+    nanobot 是一个超轻量级的个人 AI 助手，支持通过 Telegram、WhatsApp、Discord、飞书、钉钉等多种渠道进行交互。
+    
+    支持的 AI 模型：
+    - OpenRouter (所有模型)
+    - Anthropic Claude
+    - OpenAI GPT
+    - 阿里云通义千问 (Qwen)
+    - DeepSeek
+    - Moonshot/Kimi
+    - 智谱 GLM
+    - 本地 vLLM
+    
+    首次运行后，请编辑 /mnt/user/appdata/nanobot/config.json 配置文件，添加您的 API 密钥和聊天渠道设置。
+  </Overview>
+  <Category>Productivity: Tools:</Category>
+  <WebUI/>
+  <TemplateURL>https://raw.githubusercontent.com/nonewind/nanobot/main/unraid/nanobot.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/HKUDS/nanobot/main/nanobot_logo.png</Icon>
+  <ExtraParams>--restart=unless-stopped</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText>Support nanobot development</DonateText>
+  <DonateLink>https://github.com/HKUDS/nanobot</DonateLink>
+  <Requires/>
+  <Config Name="Config Path" Target="/root/.nanobot" Default="/mnt/user/appdata/nanobot" Mode="rw" Description="nanobot 配置文件目录，包含 config.json 和 workspace" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/nanobot</Config>
+  <Config Name="Gateway Port" Target="18790" Default="18790" Mode="tcp" Description="nanobot Gateway HTTP 端口" Type="Port" Display="always" Required="false" Mask="false">18790</Config>
+  <Config Name="DASHSCOPE_API_KEY" Target="DASHSCOPE_API_KEY" Default="" Mode="" Description="阿里云 DashScope API Key (用于 Qwen 模型)，从 https://dashscope.console.aliyun.com 获取" Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="OPENROUTER_API_KEY" Target="OPENROUTER_API_KEY" Default="" Mode="" Description="OpenRouter API Key (访问所有模型)，从 https://openrouter.ai/keys 获取" Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="ANTHROPIC_API_KEY" Target="ANTHROPIC_API_KEY" Default="" Mode="" Description="Anthropic API Key (Claude 模型)" Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="OPENAI_API_KEY" Target="OPENAI_API_KEY" Default="" Mode="" Description="OpenAI API Key (GPT 模型)" Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="DEEPSEEK_API_KEY" Target="DEEPSEEK_API_KEY" Default="" Mode="" Description="DeepSeek API Key" Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="TZ" Target="TZ" Default="Asia/Shanghai" Mode="" Description="时区设置" Type="Variable" Display="advanced" Required="false" Mask="false">Asia/Shanghai</Config>
+  <Config Name="HTTP_PROXY" Target="HTTP_PROXY" Default="" Mode="" Description="HTTP 代理地址 (如需要访问 Telegram 等)" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="HTTPS_PROXY" Target="HTTPS_PROXY" Default="" Mode="" Description="HTTPS 代理地址" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+</Container>
