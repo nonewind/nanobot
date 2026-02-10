@@ -1,0 +1,79 @@
+{
+  "agents": {
+    "defaults": {
+      "workspace": "~/.nanobot/workspace",
+      "model": "qwen-max",
+      "maxTokens": 8192,
+      "temperature": 0.7,
+      "maxToolIterations": 20
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "token": "YOUR_TELEGRAM_BOT_TOKEN",
+      "allowFrom": ["YOUR_TELEGRAM_USER_ID"],
+      "proxy": null
+    },
+    "whatsapp": {
+      "enabled": false,
+      "bridgeUrl": "ws://localhost:3001",
+      "allowFrom": []
+    },
+    "discord": {
+      "enabled": false,
+      "token": "",
+      "allowFrom": []
+    },
+    "feishu": {
+      "enabled": false,
+      "appId": "",
+      "appSecret": "",
+      "allowFrom": []
+    },
+    "dingtalk": {
+      "enabled": false,
+      "clientId": "",
+      "clientSecret": "",
+      "allowFrom": []
+    }
+  },
+  "providers": {
+    "dashscope": {
+      "apiKey": "YOUR_DASHSCOPE_API_KEY",
+      "apiBase": null
+    },
+    "openrouter": {
+      "apiKey": "",
+      "apiBase": null
+    },
+    "anthropic": {
+      "apiKey": "",
+      "apiBase": null
+    },
+    "openai": {
+      "apiKey": "",
+      "apiBase": null
+    },
+    "deepseek": {
+      "apiKey": "",
+      "apiBase": null
+    }
+  },
+  "gateway": {
+    "host": "0.0.0.0",
+    "port": 18790
+  },
+  "tools": {
+    "web": {
+      "search": {
+        "apiKey": "",
+        "maxResults": 5
+      }
+    },
+    "exec": {
+      "timeout": 60
+    },
+    "restrictToWorkspace": false
+  }
+}
