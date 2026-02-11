@@ -103,11 +103,11 @@ config = {
         "web": {
             "search": {
                 "apiKey": os.environ.get("BRAVE_SEARCH_API_KEY", ""),
-                "maxResults": 5
+                "maxResults": int(os.environ.get("BRAVE_SEARCH_MAX_RESULTS", "5"))
             }
         },
         "exec": {
-            "timeout": 60
+            "timeout": int(os.environ.get("NANOBOT_EXEC_TIMEOUT", "60"))
         },
         "restrictToWorkspace": os.environ.get("NANOBOT_RESTRICT_WORKSPACE", "false").lower() == "true"
     }
