@@ -242,6 +242,13 @@ class AgentLoop:
         session.add_message("assistant", final_content)
         self.sessions.save(session)
         
+        # Add token usage statistics if available
+        if hasattr(response, "usage") and response.usage:
+            usage = response.usage
+            token_info = f"\n\n📊 Token Usage: {usage.get('total_tokens', 0)} total "
+            token_info += f"({usage.get('prompt_tokens', 0)} prompt + {usage.get('completion_tokens', 0)} completion)"
+            final_content += token_info
+
         return OutboundMessage(
             channel=msg.channel,
             chat_id=msg.chat_id,
