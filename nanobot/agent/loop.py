@@ -11,6 +11,7 @@ from nanobot.bus.events import InboundMessage, OutboundMessage
 from nanobot.bus.queue import MessageBus
 from nanobot.providers.base import LLMProvider
 from nanobot.agent.context import ContextBuilder
+from nanobot.agent.memory_integration import MemoryIntegration
 from nanobot.agent.tools.registry import ToolRegistry
 from nanobot.agent.tools.filesystem import ReadFileTool, WriteFileTool, EditFileTool, ListDirTool
 from nanobot.agent.tools.shell import ExecTool
@@ -73,6 +74,7 @@ class AgentLoop:
         )
         
         self._running = False
+        self.memory_integration = MemoryIntegration(workspace=str(workspace))
         self._register_default_tools()
     
     def _register_default_tools(self) -> None:
@@ -175,10 +177,15 @@ class AgentLoop:
         if isinstance(cron_tool, CronTool):
             cron_tool.set_context(msg.channel, msg.chat_id)
         
+        # Enhance user query with relevant memories
+        enhanced_query = self.memory_integration.enhance_prompt_with_memories(
+            msg.content, session.get_history()
+        )
+        
         # Build initial messages (use get_history for LLM-formatted messages)
         messages = self.context.build_messages(
             history=session.get_history(),
-            current_message=msg.content,
+            current_message=enhanced_query,
             media=msg.media if msg.media else None,
             channel=msg.channel,
             chat_id=msg.chat_id,
@@ -308,10 +315,15 @@ class AgentLoop:
         if isinstance(cron_tool, CronTool):
             cron_tool.set_context(origin_channel, origin_chat_id)
         
+        # Enhance system message with relevant memories
+        enhanced_query = self.memory_integration.enhance_prompt_with_memories(
+            msg.content, session.get_history()
+        )
+        
         # Build messages with the announce content
         messages = self.context.build_messages(
             history=session.get_history(),
-            current_message=msg.content,
+            current_message=enhanced_query,
             channel=origin_channel,
             chat_id=origin_chat_id,
         )
@@ -407,11 +419,19 @@ class AgentLoop:
         Returns:
             The agent's response.
         """
+        # Get session for memory context
+        session = self.sessions.get_or_create(session_key)
+        
+        # Enhance query with memories
+        enhanced_content = self.memory_integration.enhance_prompt_with_memories(
+            content, session.get_history()
+        )
+        
         msg = InboundMessage(
             channel=channel,
             sender_id="user",
             chat_id=chat_id,
-            content=content
+            content=enhanced_content
         )
         
         response = await self._process_message(msg)
