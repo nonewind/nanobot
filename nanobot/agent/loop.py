@@ -224,6 +224,17 @@ class AgentLoop:
                     reasoning_content=response.reasoning_content,
                 )
                 
+                # Send intermediate thinking to user (Telegram compatible)
+                thinking_content = response.reasoning_content or response.content
+                if thinking_content and iteration < self.max_iterations:
+                    thinking_preview = thinking_content[:200] + "..." if len(thinking_content) > 200 else thinking_content
+                    logger.info(f"Sending intermediate thinking to {msg.channel}:{msg.chat_id}: {thinking_preview}")
+                    await self.bus.publish_outbound(OutboundMessage(
+                        channel=msg.channel,
+                        chat_id=msg.chat_id,
+                        content=f"💭 *Thinking...*\n{thinking_content}"
+                    ))
+                
                 # Execute tools with parallel support
                 if len(response.tool_calls) > 1:
                     # Multiple tool calls - check if we can execute in parallel
