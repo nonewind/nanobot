@@ -74,7 +74,7 @@ class AgentLoop:
         )
         
         self._running = False
-        self.memory_integration = MemoryIntegration(workspace=str(workspace))
+        self.memory_integration = MemoryIntegration(workspace_path=str(workspace))
         self._register_default_tools()
     
     def _register_default_tools(self) -> None:
