@@ -217,14 +217,28 @@ class AgentLoop:
                     reasoning_content=response.reasoning_content,
                 )
                 
-                # Execute tools
-                for tool_call in response.tool_calls:
-                    args_str = json.dumps(tool_call.arguments, ensure_ascii=False)
-                    logger.info(f"Tool call: {tool_call.name}({args_str[:200]})")
-                    result = await self.tools.execute(tool_call.name, tool_call.arguments)
-                    messages = self.context.add_tool_result(
-                        messages, tool_call.id, tool_call.name, result
-                    )
+                # Execute tools with parallel support
+                if len(response.tool_calls) > 1:
+                    # Multiple tool calls - check if we can execute in parallel
+                    tool_calls_info = [(tc.name, tc.arguments) for tc in response.tool_calls]
+                    results = await self.tools.execute_parallel(tool_calls_info)
+                    
+                    # Add all tool results to messages
+                    for i, tool_call in enumerate(response.tool_calls):
+                        args_str = json.dumps(tool_call.arguments, ensure_ascii=False)
+                        logger.info(f"Tool call: {tool_call.name}({args_str[:200]})")
+                        messages = self.context.add_tool_result(
+                            messages, tool_call.id, tool_call.name, results[i]
+                        )
+                else:
+                    # Single tool call - use existing serial execution
+                    for tool_call in response.tool_calls:
+                        args_str = json.dumps(tool_call.arguments, ensure_ascii=False)
+                        logger.info(f"Tool call: {tool_call.name}({args_str[:200]})")
+                        result = await self.tools.execute(tool_call.name, tool_call.arguments)
+                        messages = self.context.add_tool_result(
+                            messages, tool_call.id, tool_call.name, result
+                        )
             else:
                 # No tool calls, we're done
                 final_content = response.content
@@ -330,13 +344,28 @@ class AgentLoop:
                     reasoning_content=response.reasoning_content,
                 )
                 
-                for tool_call in response.tool_calls:
-                    args_str = json.dumps(tool_call.arguments, ensure_ascii=False)
-                    logger.info(f"Tool call: {tool_call.name}({args_str[:200]})")
-                    result = await self.tools.execute(tool_call.name, tool_call.arguments)
-                    messages = self.context.add_tool_result(
-                        messages, tool_call.id, tool_call.name, result
-                    )
+                # Execute tools with parallel support
+                if len(response.tool_calls) > 1:
+                    # Multiple tool calls - check if we can execute in parallel
+                    tool_calls_info = [(tc.name, tc.arguments) for tc in response.tool_calls]
+                    results = await self.tools.execute_parallel(tool_calls_info)
+                    
+                    # Add all tool results to messages
+                    for i, tool_call in enumerate(response.tool_calls):
+                        args_str = json.dumps(tool_call.arguments, ensure_ascii=False)
+                        logger.info(f"Tool call: {tool_call.name}({args_str[:200]})")
+                        messages = self.context.add_tool_result(
+                            messages, tool_call.id, tool_call.name, results[i]
+                        )
+                else:
+                    # Single tool call - use existing serial execution
+                    for tool_call in response.tool_calls:
+                        args_str = json.dumps(tool_call.arguments, ensure_ascii=False)
+                        logger.info(f"Tool call: {tool_call.name}({args_str[:200]})")
+                        result = await self.tools.execute(tool_call.name, tool_call.arguments)
+                        messages = self.context.add_tool_result(
+                            messages, tool_call.id, tool_call.name, result
+                        )
             else:
                 final_content = response.content
                 break

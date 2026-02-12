@@ -60,6 +60,11 @@ class ExecTool(Tool):
             "required": ["command"]
         }
     
+    @property
+    def can_run_in_parallel(self) -> bool:
+        """Shell execution should be serialized to avoid resource conflicts and ensure predictable behavior."""
+        return False
+    
     async def execute(self, command: str, working_dir: str | None = None, **kwargs: Any) -> str:
         cwd = working_dir or self.working_dir or os.getcwd()
         guard_error = self._guard_command(command, cwd)

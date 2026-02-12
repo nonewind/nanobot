@@ -39,6 +39,14 @@ class Tool(ABC):
         """JSON Schema for tool parameters."""
         pass
     
+    @property
+    def can_run_in_parallel(self) -> bool:
+        """
+        Whether this tool can be executed in parallel with other tools.
+        Override in subclasses if tool has side effects or shared state dependencies.
+        """
+        return True
+    
     @abstractmethod
     async def execute(self, **kwargs: Any) -> str:
         """

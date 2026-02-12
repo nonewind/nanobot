@@ -88,6 +88,11 @@ class WriteFileTool(Tool):
             "required": ["path", "content"]
         }
     
+    @property
+    def can_run_in_parallel(self) -> bool:
+        """Write operations should be serialized to avoid file conflicts."""
+        return False
+    
     async def execute(self, path: str, content: str, **kwargs: Any) -> str:
         try:
             file_path = _resolve_path(path, self._allowed_dir)
@@ -134,6 +139,11 @@ class EditFileTool(Tool):
             },
             "required": ["path", "old_text", "new_text"]
         }
+    
+    @property
+    def can_run_in_parallel(self) -> bool:
+        """Edit operations should be serialized to avoid file conflicts."""
+        return False
     
     async def execute(self, path: str, old_text: str, new_text: str, **kwargs: Any) -> str:
         try:
