@@ -21,7 +21,7 @@ from nanobot.agent.tools.spawn import SpawnTool
 from nanobot.agent.tools.cron import CronTool
 from nanobot.agent.memory import MemoryStore
 from nanobot.agent.subagent import SubagentManager
-from nanobot.session.manager import SessionManager
+from nanobot.session.manager import Session, SessionManager
 
 
 class AgentLoop:
@@ -43,6 +43,8 @@ class AgentLoop:
         workspace: Path,
         model: str | None = None,
         max_iterations: int = 20,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
         memory_window: int = 50,
         brave_api_key: str | None = None,
         exec_config: "ExecToolConfig | None" = None,
@@ -57,6 +59,8 @@ class AgentLoop:
         self.workspace = workspace
         self.model = model or provider.get_default_model()
         self.max_iterations = max_iterations
+        self.temperature = temperature
+        self.max_tokens = max_tokens
         self.memory_window = memory_window
         self.brave_api_key = brave_api_key
         self.exec_config = exec_config or ExecToolConfig()
@@ -71,6 +75,8 @@ class AgentLoop:
             workspace=workspace,
             bus=bus,
             model=self.model,
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
             brave_api_key=brave_api_key,
             exec_config=self.exec_config,
             restrict_to_workspace=restrict_to_workspace,
@@ -112,6 +118,78 @@ class AgentLoop:
         # Cron tool (for scheduling)
         if self.cron_service:
             self.tools.register(CronTool(self.cron_service))
+    
+    def _set_tool_context(self, channel: str, chat_id: str) -> None:
+        """Update context for all tools that need routing info."""
+        if message_tool := self.tools.get("message"):
+            if isinstance(message_tool, MessageTool):
+                message_tool.set_context(channel, chat_id)
+
+        if spawn_tool := self.tools.get("spawn"):
+            if isinstance(spawn_tool, SpawnTool):
+                spawn_tool.set_context(channel, chat_id)
+
+        if cron_tool := self.tools.get("cron"):
+            if isinstance(cron_tool, CronTool):
+                cron_tool.set_context(channel, chat_id)
+
+    async def _run_agent_loop(self, initial_messages: list[dict]) -> tuple[str | None, list[str]]:
+        """
+        Run the agent iteration loop.
+
+        Args:
+            initial_messages: Starting messages for the LLM conversation.
+
+        Returns:
+            Tuple of (final_content, list_of_tools_used).
+        """
+        messages = initial_messages
+        iteration = 0
+        final_content = None
+        tools_used: list[str] = []
+
+        while iteration < self.max_iterations:
+            iteration += 1
+
+            response = await self.provider.chat(
+                messages=messages,
+                tools=self.tools.get_definitions(),
+                model=self.model,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+            )
+
+            if response.has_tool_calls:
+                tool_call_dicts = [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.name,
+                            "arguments": json.dumps(tc.arguments)
+                        }
+                    }
+                    for tc in response.tool_calls
+                ]
+                messages = self.context.add_assistant_message(
+                    messages, response.content, tool_call_dicts,
+                    reasoning_content=response.reasoning_content,
+                )
+
+                for tool_call in response.tool_calls:
+                    tools_used.append(tool_call.name)
+                    args_str = json.dumps(tool_call.arguments, ensure_ascii=False)
+                    logger.info(f"Tool call: {tool_call.name}({args_str[:200]})")
+                    result = await self.tools.execute(tool_call.name, tool_call.arguments)
+                    messages = self.context.add_tool_result(
+                        messages, tool_call.id, tool_call.name, result
+                    )
+                messages.append({"role": "user", "content": "Reflect on the results and decide next steps."})
+            else:
+                final_content = response.content
+                break
+
+        return final_content, tools_used
 
     async def run(self) -> None:
         """Run the agent loop, processing messages from the bus."""
@@ -120,20 +198,16 @@ class AgentLoop:
 
         while self._running:
             try:
-                # Wait for next message
                 msg = await asyncio.wait_for(
                     self.bus.consume_inbound(),
                     timeout=1.0
                 )
-
-                # Process it
                 try:
                     response = await self._process_message(msg)
                     if response:
                         await self.bus.publish_outbound(response)
                 except Exception as e:
                     logger.error(f"Error processing message: {e}")
-                    # Send error response
                     await self.bus.publish_outbound(OutboundMessage(
                         channel=msg.channel,
                         chat_id=msg.chat_id,
@@ -158,26 +232,31 @@ class AgentLoop:
         Returns:
             The response message, or None if no response needed.
         """
-        # Handle system messages (subagent announces)
-        # The chat_id contains the original "channel:chat_id" to route back to
+        # System messages route back via chat_id ("channel:chat_id")
         if msg.channel == "system":
             return await self._process_system_message(msg)
-
-        preview = msg.content[:80] + \
-            "..." if len(msg.content) > 80 else msg.content
-        logger.info(
-            f"Processing message from {msg.channel}:{msg.sender_id}: {preview}")
-
-        # Get or create session
+        
+        preview = msg.content[:80] + "..." if len(msg.content) > 80 else msg.content
+        logger.info(f"Processing message from {msg.channel}:{msg.sender_id}: {preview}")
+        
         key = session_key or msg.session_key
         session = self.sessions.get_or_create(key)
 
         # Handle slash commands
         cmd = msg.content.strip().lower()
         if cmd == "/new":
-            await self._consolidate_memory(session, archive_all=True)
+            # Capture messages before clearing (avoid race condition with background task)
+            messages_to_archive = session.messages.copy()
             session.clear()
             self.sessions.save(session)
+            self.sessions.invalidate(session.key)
+
+            async def _consolidate_and_cleanup():
+                temp_session = Session(key=session.key)
+                temp_session.messages = messages_to_archive
+                await self._consolidate_memory(temp_session, archive_all=True)
+
+            asyncio.create_task(_consolidate_and_cleanup())
             return OutboundMessage(channel=msg.channel, chat_id=msg.chat_id,
                                    content="🐈 New session started. Memory consolidated.")
         if cmd == "/help":
@@ -189,140 +268,41 @@ class AgentLoop:
             await self._consolidate_memory(session)
 
         # Update tool contexts
-        message_tool = self.tools.get("message")
-        if isinstance(message_tool, MessageTool):
-            message_tool.set_context(msg.channel, msg.chat_id)
-
-        spawn_tool = self.tools.get("spawn")
-        if isinstance(spawn_tool, SpawnTool):
-            spawn_tool.set_context(msg.channel, msg.chat_id)
-
-        cron_tool = self.tools.get("cron")
-        if isinstance(cron_tool, CronTool):
-            cron_tool.set_context(msg.channel, msg.chat_id)
+        self._set_tool_context(msg.channel, msg.chat_id)
 
         # Enhance user query with relevant memories
         enhanced_query = self.memory_integration.enhance_prompt_with_memories(
             msg.content, session.get_history()
         )
+        if cmd == "/help":
+            return OutboundMessage(channel=msg.channel, chat_id=msg.chat_id,
+                                  content="🐈 nanobot commands:\n/new — Start a new conversation\n/help — Show available commands")
+        
+        if len(session.messages) > self.memory_window:
+            asyncio.create_task(self._consolidate_memory(session))
 
-        # Build initial messages (use get_history for LLM-formatted messages)
-        messages = self.context.build_messages(
-            history=session.get_history(),
-            current_message=enhanced_query,
+        self._set_tool_context(msg.channel, msg.chat_id)
+        initial_messages = self.context.build_messages(
+            history=session.get_history(max_messages=self.memory_window),
+            current_message=msg.content,
             media=msg.media if msg.media else None,
             channel=msg.channel,
             chat_id=msg.chat_id,
         )
 
-        # Agent loop
-        iteration = 0
-        final_content = None
-        tools_used: list[str] = []
-
-        while iteration < self.max_iterations:
-            iteration += 1
-
-            # Call LLM
-            response = await self.provider.chat(
-                messages=messages,
-                tools=self.tools.get_definitions(),
-                model=self.model
-            )
-
-            # Handle tool calls
-            if response.has_tool_calls:
-                # Add assistant message with tool calls
-                tool_call_dicts = [
-                    {
-                        "id": tc.id,
-                        "type": "function",
-                        "function": {
-                            "name": tc.name,
-                            # Must be JSON string
-                            "arguments": json.dumps(tc.arguments)
-                        }
-                    }
-                    for tc in response.tool_calls
-                ]
-                messages = self.context.add_assistant_message(
-                    messages, response.content, tool_call_dicts,
-                    reasoning_content=response.reasoning_content,
-                )
-
-                # Send intermediate thinking to user (Telegram compatible)
-                thinking_content = response.reasoning_content or response.content
-                if thinking_content and iteration < self.max_iterations:
-                    thinking_preview = thinking_content[:200] + "..." if len(
-                        thinking_content) > 200 else thinking_content
-                    logger.info(
-                        f"Sending intermediate thinking to {msg.channel}:{msg.chat_id}: {thinking_preview}")
-                    await self.bus.publish_outbound(OutboundMessage(
-                        channel=msg.channel,
-                        chat_id=msg.chat_id,
-                        content=f"💭 *Thinking...*\n{thinking_content}"
-                    ))
-
-                # Execute tools with parallel support
-                if len(response.tool_calls) > 1:
-                    # Multiple tool calls - check if we can execute in parallel
-                    tool_calls_info = [(tc.name, tc.arguments)
-                                       for tc in response.tool_calls]
-                    results = await self.tools.execute_parallel(tool_calls_info)
-
-                    # Add all tool results to messages
-                    for i, tool_call in enumerate(response.tool_calls):
-                        tools_used.append(tool_call.name)
-                        args_str = json.dumps(
-                            tool_call.arguments, ensure_ascii=False)
-                        logger.info(
-                            f"Tool call: {tool_call.name}({args_str[:200]})")
-                        messages = self.context.add_tool_result(
-                            messages, tool_call.id, tool_call.name, results[i]
-                        )
-                else:
-                    # Single tool call - use existing serial execution
-                    for tool_call in response.tool_calls:
-                        tools_used.append(tool_call.name)
-                        args_str = json.dumps(
-                            tool_call.arguments, ensure_ascii=False)
-                        logger.info(
-                            f"Tool call: {tool_call.name}({args_str[:200]})")
-                        result = await self.tools.execute(tool_call.name, tool_call.arguments)
-                        messages = self.context.add_tool_result(
-                            messages, tool_call.id, tool_call.name, result
-                        )
-                # Interleaved CoT: reflect before next action
-                messages.append(
-                    {"role": "user", "content": "Reflect on the results and decide next steps."})
-            else:
-                # No tool calls, we're done
-                final_content = response.content
-                break
+        # Run agent loop
+        final_content, tools_used = await self._run_agent_loop(initial_messages)
 
         if final_content is None:
-            if iteration >= self.max_iterations:
-                final_content = f"Reached {self.max_iterations} iterations without completion."
-            else:
-                final_content = "I've completed processing but have no response to give."
-
-        # Log response preview
-        preview = final_content[:120] + \
-            "..." if len(final_content) > 120 else final_content
+            final_content = "I've completed processing but have no response to give."
+        
+        preview = final_content[:120] + "..." if len(final_content) > 120 else final_content
         logger.info(f"Response to {msg.channel}:{msg.sender_id}: {preview}")
-
-        # Save to session (include tool names so consolidation sees what happened)
+        
         session.add_message("user", msg.content)
         session.add_message("assistant", final_content,
                             tools_used=tools_used if tools_used else None)
         self.sessions.save(session)
-
-        # Add token usage statistics if available
-        if hasattr(response, "usage") and response.usage:
-            usage = response.usage
-            token_info = f"\n\n📊 Token Usage: {usage.get('total_tokens', 0)} total "
-            token_info += f"({usage.get('prompt_tokens', 0)} prompt + {usage.get('completion_tokens', 0)} completion)"
-            final_content += token_info
 
         return OutboundMessage(
             channel=msg.channel,
@@ -356,17 +336,7 @@ class AgentLoop:
         session = self.sessions.get_or_create(session_key)
 
         # Update tool contexts
-        message_tool = self.tools.get("message")
-        if isinstance(message_tool, MessageTool):
-            message_tool.set_context(origin_channel, origin_chat_id)
-
-        spawn_tool = self.tools.get("spawn")
-        if isinstance(spawn_tool, SpawnTool):
-            spawn_tool.set_context(origin_channel, origin_chat_id)
-
-        cron_tool = self.tools.get("cron")
-        if isinstance(cron_tool, CronTool):
-            cron_tool.set_context(origin_channel, origin_chat_id)
+        self._set_tool_context(origin_channel, origin_chat_id)
 
         # Enhance system message with relevant memories
         enhanced_query = self.memory_integration.enhance_prompt_with_memories(
@@ -444,11 +414,11 @@ class AgentLoop:
             else:
                 final_content = response.content
                 break
+        final_content, _ = await self._run_agent_loop(initial_messages)
 
         if final_content is None:
             final_content = "Background task completed."
-
-        # Save to session (mark as system message in history)
+        
         session.add_message("user", f"[System: {msg.sender_id}] {msg.content}")
         session.add_message("assistant", final_content)
         self.sessions.save(session)
@@ -460,22 +430,34 @@ class AgentLoop:
         )
 
     async def _consolidate_memory(self, session, archive_all: bool = False) -> None:
-        """Consolidate old messages into MEMORY.md + HISTORY.md, then trim session."""
-        if not session.messages:
-            return
+        """Consolidate old messages into MEMORY.md + HISTORY.md.
+
+        Args:
+            archive_all: If True, clear all messages and reset session (for /new command).
+                       If False, only write to files without modifying session.
+        """
         memory = MemoryStore(self.workspace)
+
         if archive_all:
             old_messages = session.messages
             keep_count = 0
+            logger.info(f"Memory consolidation (archive_all): {len(session.messages)} total messages archived")
         else:
-            keep_count = min(10, max(2, self.memory_window // 2))
-            old_messages = session.messages[:-keep_count]
-        if not old_messages:
-            return
-        logger.info(
-            f"Memory consolidation started: {len(session.messages)} messages, archiving {len(old_messages)}, keeping {keep_count}")
+            keep_count = self.memory_window // 2
+            if len(session.messages) <= keep_count:
+                logger.debug(f"Session {session.key}: No consolidation needed (messages={len(session.messages)}, keep={keep_count})")
+                return
 
-        # Format messages for LLM (include tool names when available)
+            messages_to_process = len(session.messages) - session.last_consolidated
+            if messages_to_process <= 0:
+                logger.debug(f"Session {session.key}: No new messages to consolidate (last_consolidated={session.last_consolidated}, total={len(session.messages)})")
+                return
+
+            old_messages = session.messages[session.last_consolidated:-keep_count]
+            if not old_messages:
+                return
+            logger.info(f"Memory consolidation started: {len(session.messages)} total, {len(old_messages)} new to consolidate, {keep_count} keep")
+
         lines = []
         for m in old_messages:
             if not m.get("content"):
@@ -520,10 +502,11 @@ Respond with ONLY valid JSON, no markdown fences."""
                 if update != current_memory:
                     memory.write_long_term(update)
 
-            session.messages = session.messages[-keep_count:] if keep_count else []
-            self.sessions.save(session)
-            logger.info(
-                f"Memory consolidation done, session trimmed to {len(session.messages)} messages")
+            if archive_all:
+                session.last_consolidated = 0
+            else:
+                session.last_consolidated = len(session.messages) - keep_count
+            logger.info(f"Memory consolidation done: {len(session.messages)} messages, last_consolidated={session.last_consolidated}")
         except Exception as e:
             logger.error(f"Memory consolidation failed: {e}")
 
