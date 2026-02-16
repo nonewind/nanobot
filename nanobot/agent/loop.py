@@ -146,7 +146,7 @@ class AgentLoop:
             if isinstance(cron_tool, CronTool):
                 cron_tool.set_context(channel, chat_id)
 
-    async def _run_agent_loop(self, initial_messages: list[dict]) -> tuple[str | None, list[str]]:
+    async def _run_agent_loop(self, initial_messages: list[dict]) -> tuple[str | None, list[str], object | None]:
         """
         Run the agent iteration loop.
 
@@ -154,12 +154,13 @@ class AgentLoop:
             initial_messages: Starting messages for the LLM conversation.
 
         Returns:
-            Tuple of (final_content, list_of_tools_used).
+            Tuple of (final_content, list_of_tools_used, last_response).
         """
         messages = initial_messages
         iteration = 0
         final_content = None
         tools_used: list[str] = []
+        last_response = None
 
         while iteration < self.max_iterations:
             iteration += 1
@@ -171,6 +172,7 @@ class AgentLoop:
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
             )
+            last_response = response
 
             if response.has_tool_calls:
                 tool_call_dicts = [
@@ -202,7 +204,7 @@ class AgentLoop:
                 final_content = response.content
                 break
 
-        return final_content, tools_used
+        return final_content, tools_used, last_response
 
     async def run(self) -> None:
         """Run the agent loop, processing messages from the bus."""
@@ -297,7 +299,7 @@ class AgentLoop:
             channel=msg.channel,
             chat_id=msg.chat_id,
         )
-        final_content, tools_used = await self._run_agent_loop(initial_messages)
+        final_content, tools_used, response = await self._run_agent_loop(initial_messages)
 
         if final_content is None:
             final_content = "I've completed processing but have no response to give."
@@ -309,6 +311,13 @@ class AgentLoop:
         session.add_message("assistant", final_content,
                             tools_used=tools_used if tools_used else None)
         self.sessions.save(session)
+        
+        # Add token usage statistics if available
+        if response and hasattr(response, "usage") and response.usage:
+            usage = response.usage
+            token_info = f"\n\n📊 Token Usage: {usage.get('total_tokens', 0)} total "
+            token_info += f"({usage.get('prompt_tokens', 0)} prompt + {usage.get('completion_tokens', 0)} completion)"
+            final_content += token_info
         
         return OutboundMessage(
             channel=msg.channel,
@@ -345,7 +354,7 @@ class AgentLoop:
             channel=origin_channel,
             chat_id=origin_chat_id,
         )
-        final_content, _ = await self._run_agent_loop(initial_messages)
+        final_content, _, _ = await self._run_agent_loop(initial_messages)
 
         if final_content is None:
             final_content = "Background task completed."
