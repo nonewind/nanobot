@@ -58,6 +58,30 @@
     "deepseek": {
       "apiKey": "",
       "apiBase": null
+    },
+    "moonshot": {
+      "apiKey": "",
+      "apiBase": null
+    },
+    "zhipu": {
+      "apiKey": "",
+      "apiBase": null
+    },
+    "gemini": {
+      "apiKey": "",
+      "apiBase": null
+    },
+    "minimax": {
+      "apiKey": "",
+      "apiBase": null
+    },
+    "groq": {
+      "apiKey": "",
+      "apiBase": null
+    },
+    "vllm": {
+      "apiKey": "dummy",
+      "apiBase": null
     }
   },
   "gateway": {
