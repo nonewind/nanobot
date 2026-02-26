@@ -79,6 +79,9 @@
   <Config Name="OPENROUTER_API_KEY" Target="OPENROUTER_API_KEY" Default="" Mode=""
     Description="OpenRouter API Key (全球模型聚合网关)" Type="Variable" Display="always" Required="false"
     Mask="true" />
+  <Config Name="AIHUBMIX_API_KEY" Target="AIHUBMIX_API_KEY" Default="" Mode=""
+    Description="AiHubMix API Key (全球模型聚合网关)" Type="Variable" Display="always" Required="false"
+    Mask="true" />
   <Config Name="ANTHROPIC_API_KEY" Target="ANTHROPIC_API_KEY" Default="" Mode=""
     Description="Anthropic API Key (Claude 模型)" Type="Variable" Display="advanced" Required="false"
     Mask="true" />
