@@ -230,7 +230,13 @@ class AgentLoop:
                         messages, tool_call.id, tool_call.name, result
                     )
             else:
-                final_content = self._strip_think(response.content)
+                clean = self._strip_think(response.content)
+                if on_progress and clean:
+                    await on_progress(clean)
+                messages = self.context.add_assistant_message(
+                    messages, clean, reasoning_content=response.reasoning_content,
+                )
+                final_content = clean
                 break
 
         if final_content is None and iteration >= self.max_iterations:
@@ -465,6 +471,14 @@ class AgentLoop:
                 content = entry["content"]
                 if len(content) > self._TOOL_RESULT_MAX_CHARS:
                     entry["content"] = content[:self._TOOL_RESULT_MAX_CHARS] + "\n... (truncated)"
+            if entry.get("role") == "user" and isinstance(entry.get("content"), list):
+                entry["content"] = [
+                    {"type": "text", "text": "[image]"} if (
+                        c.get("type") == "image_url"
+                        and c.get("image_url", {}).get("url", "").startswith("data:image/")
+                    ) else c
+                    for c in entry["content"]
+                ]
             entry.setdefault("timestamp", datetime.now().isoformat())
             session.messages.append(entry)
         session.updated_at = datetime.now()
