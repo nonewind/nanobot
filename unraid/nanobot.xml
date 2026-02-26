@@ -52,11 +52,9 @@
 
   <!-- 路径映射 -->
   <Config Name="Config Path" Target="/root/.nanobot" Default="/mnt/user/appdata/nanobot" Mode="rw"
-    Description="nanobot 配置和数据目录" Type="Path" Display="always" Required="true" Mask="false">
-    /mnt/user/appdata/nanobot</Config>
+    Description="nanobot 配置和数据目录" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/nanobot</Config>
   <Config Name="Gateway Port" Target="18790" Default="18790" Mode="tcp"
-    Description="nanobot Gateway HTTP 端口" Type="Port" Display="always" Required="false" Mask="false">
-    18790</Config>
+    Description="nanobot Gateway HTTP 端口" Type="Port" Display="always" Required="false" Mask="false">18790</Config>
 
   <!-- 模型配置 -->
   <Config Name="NANOBOT_MODEL" Target="NANOBOT_MODEL" Default="qwen-plus" Mode=""
