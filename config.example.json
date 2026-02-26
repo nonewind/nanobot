@@ -47,6 +47,10 @@
       "apiKey": "",
       "apiBase": null
     },
+    "aihubmix": {
+      "apiKey": "",
+      "apiBase": null
+    },
     "anthropic": {
       "apiKey": "",
       "apiBase": null

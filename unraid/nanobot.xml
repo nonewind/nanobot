@@ -29,6 +29,11 @@
     - 本地：vLLM、自定义 OpenAI-compatible 端点
     - 其他：Groq(快速推理+Whisper语音)、Github Copilot(OAuth)
 
+    ⚠️ 中国用户注意：
+    - AiHubMix: 如无法访问默认地址，需设置 AIHUBMIX_API_BASE
+    - Moonshot: 推荐使用 MOONSHOT_API_BASE=https://api.moonshot.cn/v1
+    - MiniMax: 中国平台需设置 MINIMAX_API_BASE=https://api.minimaxi.com/v1
+
     工具功能：
     - Web 搜索 (Brave Search API)
     - Shell 命令执行
@@ -82,6 +87,9 @@
   <Config Name="AIHUBMIX_API_KEY" Target="AIHUBMIX_API_KEY" Default="" Mode=""
     Description="AiHubMix API Key (全球模型聚合网关)" Type="Variable" Display="always" Required="false"
     Mask="true" />
+  <Config Name="AIHUBMIX_API_BASE" Target="AIHUBMIX_API_BASE" Default="" Mode=""
+    Description="AiHubMix API Base URL (中国用户如无法访问默认地址可自定义)" Type="Variable" Display="advanced" Required="false"
+    Mask="false" />
   <Config Name="ANTHROPIC_API_KEY" Target="ANTHROPIC_API_KEY" Default="" Mode=""
     Description="Anthropic API Key (Claude 模型)" Type="Variable" Display="advanced" Required="false"
     Mask="true" />
@@ -93,6 +101,9 @@
   <Config Name="MOONSHOT_API_KEY" Target="MOONSHOT_API_KEY" Default="" Mode=""
     Description="Moonshot / Kimi API Key" Type="Variable" Display="advanced" Required="false"
     Mask="true" />
+  <Config Name="MOONSHOT_API_BASE" Target="MOONSHOT_API_BASE" Default="" Mode=""
+    Description="Moonshot API Base URL (中国用户推荐: https://api.moonshot.cn/v1)" Type="Variable" Display="advanced" Required="false"
+    Mask="false" />
   <Config Name="GEMINI_API_KEY" Target="GEMINI_API_KEY" Default="" Mode=""
     Description="Google Gemini API Key" Type="Variable" Display="advanced" Required="false"
     Mask="true" />
@@ -101,6 +112,9 @@
     Mask="true" />
   <Config Name="MINIMAX_API_KEY" Target="MINIMAX_API_KEY" Default="" Mode=""
     Description="MiniMax API Key" Type="Variable" Display="advanced" Required="false" Mask="true" />
+  <Config Name="MINIMAX_API_BASE" Target="MINIMAX_API_BASE" Default="" Mode=""
+    Description="MiniMax API Base URL (中国平台: https://api.minimaxi.com/v1)" Type="Variable" Display="advanced" Required="false"
+    Mask="false" />
   <Config Name="GROQ_API_KEY" Target="GROQ_API_KEY" Default="" Mode=""
     Description="Groq API Key (用于 Whisper 语音转写和快速推理)" Type="Variable" Display="advanced"
     Required="false"

@@ -65,7 +65,28 @@ docker run -d \
 | 服务 | 获取地址 |
 |------|----------|
 | DashScope (Qwen) | https://dashscope.console.aliyun.com |
+| AiHubMix | https://aihubmix.com |
 | Telegram Bot | @BotFather |
+
+## ⚠️ 中国用户注意事项
+
+如果使用以下提供商，可能需要在配置中设置 `apiBase`：
+
+- **AiHubMix**: 如果无法直接访问 aihubmix.com，需要配置自定义 `apiBase`（通过代理或其他端点）
+- **Moonshot/Kimi**: 中国用户使用 `"apiBase": "https://api.moonshot.cn/v1"`
+- **MiniMax**: 中国平台（minimaxi.com）使用 `"apiBase": "https://api.minimaxi.com/v1"`
+
+配置示例：
+```json
+{
+  "providers": {
+    "aihubmix": {
+      "apiKey": "YOUR_AIHUBMIX_API_KEY",
+      "apiBase": "YOUR_CUSTOM_ENDPOINT"
+    }
+  }
+}
+```
 
 ## 🔄 更新镜像
 

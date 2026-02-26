@@ -66,6 +66,18 @@ config = {
             "apiKey": os.environ.get("OPENROUTER_API_KEY", ""),
             "apiBase": os.environ.get("OPENROUTER_API_BASE") or None
         },
+        "aihubmix": {
+            "apiKey": os.environ.get("AIHUBMIX_API_KEY", ""),
+            "apiBase": os.environ.get("AIHUBMIX_API_BASE") or None
+        },
+        "siliconflow": {
+            "apiKey": os.environ.get("SILICONFLOW_API_KEY", ""),
+            "apiBase": os.environ.get("SILICONFLOW_API_BASE") or None
+        },
+        "volcengine": {
+            "apiKey": os.environ.get("VOLCENGINE_API_KEY", ""),
+            "apiBase": os.environ.get("VOLCENGINE_API_BASE") or None
+        },
         "anthropic": {
             "apiKey": os.environ.get("ANTHROPIC_API_KEY", ""),
             "apiBase": os.environ.get("ANTHROPIC_API_BASE") or None
