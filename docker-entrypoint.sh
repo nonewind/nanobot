@@ -86,6 +86,14 @@ config = {
             "apiKey": os.environ.get("ZHIPU_API_KEY", ""),
             "apiBase": os.environ.get("ZHIPU_API_BASE") or None
         },
+        "gemini": {
+            "apiKey": os.environ.get("GEMINI_API_KEY", ""),
+            "apiBase": os.environ.get("GEMINI_API_BASE") or None
+        },
+        "minimax": {
+            "apiKey": os.environ.get("MINIMAX_API_KEY", ""),
+            "apiBase": os.environ.get("MINIMAX_API_BASE") or None
+        },
         "groq": {
             "apiKey": os.environ.get("GROQ_API_KEY", ""),
             "apiBase": os.environ.get("GROQ_API_BASE") or None

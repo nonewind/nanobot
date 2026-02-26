@@ -4,64 +4,153 @@
   <Repository>ghcr.io/nonewind/nanobot:latest</Repository>
   <Registry>https://github.com/nonewind/nanobot/pkgs/container/nanobot</Registry>
   <Network>bridge</Network>
-  <MyIP/>
+  <MyIP />
   <Shell>bash</Shell>
   <Privileged>false</Privileged>
   <Support>https://github.com/HKUDS/nanobot</Support>
   <Project>https://github.com/HKUDS/nanobot</Project>
   <Overview>
     🐈 nanobot - Ultra-Lightweight Personal AI Assistant
-    
+
     配置说明：通过环境变量自动生成 config.json，无需手动编辑配置文件。
-    
-    必填项：
-    - DASHSCOPE_API_KEY: 阿里云通义千问 API Key
-    - TELEGRAM_BOT_TOKEN: Telegram 机器人 Token
-    - TELEGRAM_ALLOW_FROM: 允许的 Telegram 用户 ID
-    
+
+    必填项（至少配置一个）：
+    - 聊天渠道：Telegram / Discord / 飞书 / 钉钉 等
+    - AI 提供商：至少一个 API Key
+
+    支持的聊天渠道：
+    - Telegram (推荐)、Discord、飞书/Lark、钉钉
+    - WhatsApp、Slack、QQ、Email、Mochat
+
+    支持的 AI 提供商：
+    - 国内：DashScope(通义千问)、智谱AI(GLM)、Moonshot(Kimi)、DeepSeek、MiniMax
+    - 国际：OpenAI(GPT)、Anthropic(Claude)、Google Gemini、OpenRouter(聚合网关)
+    - 网关：AiHubMix、SiliconFlow(硅基流动)、VolcEngine(火山引擎)
+    - 本地：vLLM、自定义 OpenAI-compatible 端点
+    - 其他：Groq(快速推理+Whisper语音)、Github Copilot(OAuth)
+
+    工具功能：
+    - Web 搜索 (Brave Search API)
+    - Shell 命令执行
+    - 文件系统操作
+    - MCP 服务器集成
+    - Cron 定时任务
+
     首次启动会自动初始化 workspace。
   </Overview>
   <Category>Productivity: Tools:</Category>
-  <WebUI/>
+  <WebUI />
   <TemplateURL>https://raw.githubusercontent.com/nonewind/nanobot/main/unraid/nanobot.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/HKUDS/nanobot/main/nanobot_logo.png</Icon>
   <ExtraParams>--restart=unless-stopped</ExtraParams>
-  <PostArgs/>
-  <CPUset/>
-  <DateInstalled/>
+  <PostArgs />
+  <CPUset />
+  <DateInstalled />
   <DonateText>Support nanobot development</DonateText>
   <DonateLink>https://github.com/HKUDS/nanobot</DonateLink>
-  <Requires/>
-  
+  <Requires />
+
   <!-- 路径映射 -->
-  <Config Name="Config Path" Target="/root/.nanobot" Default="/mnt/user/appdata/nanobot" Mode="rw" Description="nanobot 配置和数据目录" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/nanobot</Config>
-  <Config Name="Gateway Port" Target="18790" Default="18790" Mode="tcp" Description="nanobot Gateway HTTP 端口" Type="Port" Display="always" Required="false" Mask="false">18790</Config>
-  
+  <Config Name="Config Path" Target="/root/.nanobot" Default="/mnt/user/appdata/nanobot" Mode="rw"
+    Description="nanobot 配置和数据目录" Type="Path" Display="always" Required="true" Mask="false">
+    /mnt/user/appdata/nanobot</Config>
+  <Config Name="Gateway Port" Target="18790" Default="18790" Mode="tcp"
+    Description="nanobot Gateway HTTP 端口" Type="Port" Display="always" Required="false" Mask="false">
+    18790</Config>
+
   <!-- 模型配置 -->
-  <Config Name="NANOBOT_MODEL" Target="NANOBOT_MODEL" Default="qwen-plus" Mode="" Description="默认 AI 模型 (qwen-plus, qwen-max, qwen-turbo 等)" Type="Variable" Display="always" Required="false" Mask="false">qwen-plus</Config>
-  
+  <Config Name="NANOBOT_MODEL" Target="NANOBOT_MODEL" Default="qwen-plus" Mode=""
+    Description="默认 AI 模型 (如: qwen-plus, claude-3-5-sonnet-20241022, gpt-4o, deepseek-chat, gemini-2.0-flash-exp, glm-4-plus, kimi-k2.5)"
+    Type="Variable" Display="always" Required="false" Mask="false">qwen-plus</Config>
+
   <!-- Telegram 配置 -->
-  <Config Name="TELEGRAM_BOT_TOKEN" Target="TELEGRAM_BOT_TOKEN" Default="" Mode="" Description="Telegram Bot Token (从 @BotFather 获取)" Type="Variable" Display="always" Required="false" Mask="true"/>
-  <Config Name="TELEGRAM_ALLOW_FROM" Target="TELEGRAM_ALLOW_FROM" Default="" Mode="" Description="允许的 Telegram 用户 ID (多个用逗号分隔)" Type="Variable" Display="always" Required="false" Mask="false"/>
-  <Config Name="TELEGRAM_PROXY" Target="TELEGRAM_PROXY" Default="" Mode="" Description="Telegram 代理地址 (如 http://192.168.1.1:7890)" Type="Variable" Display="always" Required="false" Mask="false"/>
-  
+  <Config Name="TELEGRAM_BOT_TOKEN" Target="TELEGRAM_BOT_TOKEN" Default="" Mode=""
+    Description="Telegram Bot Token (从 @BotFather 获取)" Type="Variable" Display="always"
+    Required="false" Mask="true" />
+  <Config Name="TELEGRAM_ALLOW_FROM" Target="TELEGRAM_ALLOW_FROM" Default="" Mode=""
+    Description="允许的 Telegram 用户 ID (多个用逗号分隔)" Type="Variable" Display="always" Required="false"
+    Mask="false" />
+  <Config Name="TELEGRAM_PROXY" Target="TELEGRAM_PROXY" Default="" Mode=""
+    Description="Telegram 代理地址 (如 http://192.168.1.1:7890)" Type="Variable" Display="always"
+    Required="false" Mask="false" />
+
   <!-- AI Provider API Keys -->
-  <Config Name="DASHSCOPE_API_KEY" Target="DASHSCOPE_API_KEY" Default="" Mode="" Description="阿里云 DashScope API Key (Qwen 模型必填)" Type="Variable" Display="always" Required="false" Mask="true"/>
-  <Config Name="OPENROUTER_API_KEY" Target="OPENROUTER_API_KEY" Default="" Mode="" Description="OpenRouter API Key (可访问所有模型)" Type="Variable" Display="advanced" Required="false" Mask="true"/>
-  <Config Name="ANTHROPIC_API_KEY" Target="ANTHROPIC_API_KEY" Default="" Mode="" Description="Anthropic API Key (Claude 模型)" Type="Variable" Display="advanced" Required="false" Mask="true"/>
-  <Config Name="OPENAI_API_KEY" Target="OPENAI_API_KEY" Default="" Mode="" Description="OpenAI API Key (GPT 模型)" Type="Variable" Display="advanced" Required="false" Mask="true"/>
-  <Config Name="DEEPSEEK_API_KEY" Target="DEEPSEEK_API_KEY" Default="" Mode="" Description="DeepSeek API Key" Type="Variable" Display="advanced" Required="false" Mask="true"/>
-  <Config Name="MOONSHOT_API_KEY" Target="MOONSHOT_API_KEY" Default="" Mode="" Description="Moonshot/Kimi API Key" Type="Variable" Display="advanced" Required="false" Mask="true"/>
-  
-  <!-- Discord 配置 -->
-  <Config Name="DISCORD_BOT_TOKEN" Target="DISCORD_BOT_TOKEN" Default="" Mode="" Description="Discord Bot Token" Type="Variable" Display="advanced" Required="false" Mask="true"/>
-  <Config Name="DISCORD_ALLOW_FROM" Target="DISCORD_ALLOW_FROM" Default="" Mode="" Description="允许的 Discord 用户 ID (多个用逗号分隔)" Type="Variable" Display="advanced" Required="false" Mask="false"/>
-  
+  <Config Name="DASHSCOPE_API_KEY" Target="DASHSCOPE_API_KEY" Default="" Mode=""
+    Description="阿里云 DashScope API Key (Qwen 模型)" Type="Variable" Display="always"
+    Required="false" Mask="true" />
+  <Config Name="OPENROUTER_API_KEY" Target="OPENROUTER_API_KEY" Default="" Mode=""
+    Description="OpenRouter API Key (全球模型聚合网关)" Type="Variable" Display="always" Required="false"
+    Mask="true" />
+  <Config Name="ANTHROPIC_API_KEY" Target="ANTHROPIC_API_KEY" Default="" Mode=""
+    Description="Anthropic API Key (Claude 模型)" Type="Variable" Display="advanced" Required="false"
+    Mask="true" />
+  <Config Name="OPENAI_API_KEY" Target="OPENAI_API_KEY" Default="" Mode=""
+    Description="OpenAI API Key (GPT 模型)" Type="Variable" Display="advanced" Required="false"
+    Mask="true" />
+  <Config Name="DEEPSEEK_API_KEY" Target="DEEPSEEK_API_KEY" Default="" Mode=""
+    Description="DeepSeek API Key" Type="Variable" Display="advanced" Required="false" Mask="true" />
+  <Config Name="MOONSHOT_API_KEY" Target="MOONSHOT_API_KEY" Default="" Mode=""
+    Description="Moonshot / Kimi API Key" Type="Variable" Display="advanced" Required="false"
+    Mask="true" />
+  <Config Name="GEMINI_API_KEY" Target="GEMINI_API_KEY" Default="" Mode=""
+    Description="Google Gemini API Key" Type="Variable" Display="advanced" Required="false"
+    Mask="true" />
+  <Config Name="ZHIPU_API_KEY" Target="ZHIPU_API_KEY" Default="" Mode=""
+    Description="智谱 AI / GLM API Key" Type="Variable" Display="advanced" Required="false"
+    Mask="true" />
+  <Config Name="MINIMAX_API_KEY" Target="MINIMAX_API_KEY" Default="" Mode=""
+    Description="MiniMax API Key" Type="Variable" Display="advanced" Required="false" Mask="true" />
+  <Config Name="GROQ_API_KEY" Target="GROQ_API_KEY" Default="" Mode=""
+    Description="Groq API Key (用于 Whisper 语音转写和快速推理)" Type="Variable" Display="advanced"
+    Required="false"
+    Mask="true" />
+  <Config Name="VLLM_API_KEY" Target="VLLM_API_KEY" Default="" Mode=""
+    Description="vLLM/本地部署 API Key" Type="Variable" Display="advanced" Required="false" Mask="true" />
+  <Config Name="VLLM_API_BASE" Target="VLLM_API_BASE" Default="" Mode=""
+    Description="vLLM API Base URL (如 http://localhost:8000/v1)" Type="Variable" Display="advanced"
+    Required="false" Mask="false" />
+
+  <!-- 其他渠道配置 -->
+  <Config Name="DISCORD_BOT_TOKEN" Target="DISCORD_BOT_TOKEN" Default="" Mode=""
+    Description="Discord Bot Token" Type="Variable" Display="advanced" Required="false" Mask="true" />
+  <Config Name="DISCORD_ALLOW_FROM" Target="DISCORD_ALLOW_FROM" Default="" Mode=""
+    Description="允许的 Discord 用户 ID (多个用逗号分隔)" Type="Variable" Display="advanced" Required="false"
+    Mask="false" />
+  <Config Name="FEISHU_APP_ID" Target="FEISHU_APP_ID" Default="" Mode=""
+    Description="飞书 App ID" Type="Variable" Display="advanced" Required="false" Mask="false" />
+  <Config Name="FEISHU_APP_SECRET" Target="FEISHU_APP_SECRET" Default="" Mode=""
+    Description="飞书 App Secret" Type="Variable" Display="advanced" Required="false" Mask="true" />
+  <Config Name="DINGTALK_CLIENT_ID" Target="DINGTALK_CLIENT_ID" Default="" Mode=""
+    Description="钉钉 Client ID (AppKey)" Type="Variable" Display="advanced" Required="false"
+    Mask="false" />
+  <Config Name="DINGTALK_CLIENT_SECRET" Target="DINGTALK_CLIENT_SECRET" Default="" Mode=""
+    Description="钉钉 Client Secret (AppSecret)" Type="Variable" Display="advanced" Required="false"
+    Mask="true" />
+
+  <!-- 工具配置 -->
+  <Config Name="BRAVE_SEARCH_API_KEY" Target="BRAVE_SEARCH_API_KEY" Default="" Mode=""
+    Description="Brave Search API Key (用于网页搜索功能)" Type="Variable" Display="advanced"
+    Required="false" Mask="true" />
+  <Config Name="NANOBOT_RESTRICT_WORKSPACE" Target="NANOBOT_RESTRICT_WORKSPACE" Default="false"
+    Mode=""
+    Description="限制工具访问在 workspace 目录内 (true/false)" Type="Variable" Display="advanced"
+    Required="false" Mask="false">false</Config>
+  <Config Name="NANOBOT_MAX_TOOL_ITERATIONS" Target="NANOBOT_MAX_TOOL_ITERATIONS" Default="20"
+    Mode=""
+    Description="最大工具迭代次数" Type="Variable" Display="advanced" Required="false" Mask="false">20</Config>
+
   <!-- 高级配置 -->
-  <Config Name="TZ" Target="TZ" Default="Asia/Shanghai" Mode="" Description="时区设置" Type="Variable" Display="advanced" Required="false" Mask="false">Asia/Shanghai</Config>
-  <Config Name="NANOBOT_MAX_TOKENS" Target="NANOBOT_MAX_TOKENS" Default="8192" Mode="" Description="最大 Token 数" Type="Variable" Display="advanced" Required="false" Mask="false">8192</Config>
-  <Config Name="NANOBOT_TEMPERATURE" Target="NANOBOT_TEMPERATURE" Default="0.7" Mode="" Description="温度参数 (0-1)" Type="Variable" Display="advanced" Required="false" Mask="false">0.7</Config>
-  <Config Name="NANOBOT_FORCE_CONFIG" Target="NANOBOT_FORCE_CONFIG" Default="false" Mode="" Description="强制重新生成配置文件 (true/false)" Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
-  <Config Name="HTTP_PROXY" Target="HTTP_PROXY" Default="" Mode="" Description="HTTP 代理地址" Type="Variable" Display="advanced" Required="false" Mask="false"/>
-  <Config Name="HTTPS_PROXY" Target="HTTPS_PROXY" Default="" Mode="" Description="HTTPS 代理地址" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="TZ" Target="TZ" Default="Asia/Shanghai" Mode="" Description="时区设置" Type="Variable"
+    Display="advanced" Required="false" Mask="false">Asia/Shanghai</Config>
+  <Config Name="NANOBOT_MAX_TOKENS" Target="NANOBOT_MAX_TOKENS" Default="8192" Mode=""
+    Description="最大 Token 数" Type="Variable" Display="advanced" Required="false" Mask="false">8192</Config>
+  <Config Name="NANOBOT_TEMPERATURE" Target="NANOBOT_TEMPERATURE" Default="0.7" Mode=""
+    Description="温度参数 (0-1)" Type="Variable" Display="advanced" Required="false" Mask="false">0.7</Config>
+  <Config Name="NANOBOT_FORCE_CONFIG" Target="NANOBOT_FORCE_CONFIG" Default="false" Mode=""
+    Description="强制重新生成配置文件 (true/false)" Type="Variable" Display="advanced" Required="false"
+    Mask="false">false</Config>
+  <Config Name="HTTP_PROXY" Target="HTTP_PROXY" Default="" Mode="" Description="HTTP 代理地址"
+    Type="Variable" Display="advanced" Required="false" Mask="false" />
+  <Config Name="HTTPS_PROXY" Target="HTTPS_PROXY" Default="" Mode="" Description="HTTPS 代理地址"
+    Type="Variable" Display="advanced" Required="false" Mask="false" />
 </Container>
